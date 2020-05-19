@@ -11,4 +11,5 @@ class Server extends Actor {
 object Server {
   case class PriceQuery(name: String)
   case class PriceResponse(name: String, price: Long)
+  case class NoPrices(name: String)
 }

@@ -1,5 +1,5 @@
 import PriceGenerator.InternalPriceQuery
-import Server.PriceResponse
+import Server.{NoPrices, PriceResponse}
 import akka.actor.{Actor, ActorLogging, PoisonPill, Props}
 import akka.util.Timeout
 import akka.pattern.ask
@@ -14,14 +14,14 @@ class ServerHandler extends Actor with ActorLogging {
   implicit val ec: ExecutionContext = context.dispatcher
 
   override def receive: Receive = {
-    case ipq: InternalPriceQuery => {
+    case query: InternalPriceQuery => {
       log.debug("Received query")
-      val q1 = (context.actorOf(Props[PriceGenerator]) ? ipq).asInstanceOf[Future[PriceResponse]]
-      val q2 = (context.actorOf(Props[PriceGenerator]) ? ipq).asInstanceOf[Future[PriceResponse]]
+      val q1 = (context.actorOf(Props[PriceGenerator]) ? query).asInstanceOf[Future[PriceResponse]]
+      val q2 = (context.actorOf(Props[PriceGenerator]) ? query).asInstanceOf[Future[PriceResponse]]
       val f = q1.zipWith(q2)((r1, r2) => Seq(r1.price, r2.price).min).fallbackTo(q1.map(_.price)).fallbackTo(q2.map(_.price))
       f.onComplete {
-        case Success(res) => ipq.sender ! PriceResponse(ipq.name, res)
-        case _ =>
+        case Success(res) => query.sender ! PriceResponse(query.name, res)
+        case _ => query.sender ! NoPrices(query.name)
       }
       self ! PoisonPill
     }
