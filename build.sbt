@@ -12,3 +12,5 @@ libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.12"
 libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.6.5"
 libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.6.5"
 libraryDependencies += "com.typesafe.akka" %% "akka-persistence" % "2.6.5"
+
+libraryDependencies += "org.jsoup" % "jsoup" % "1.13.1"
