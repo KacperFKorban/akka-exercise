@@ -1,5 +1,4 @@
-import Server.PriceResponse
-import PriceGenerator.InternalPriceQuery
+import PriceGenerator.{InternalPriceQuery, InternalPriceResponse}
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill}
 
 import scala.util.Random
@@ -10,7 +9,7 @@ class PriceGenerator extends Actor with ActorLogging {
       Thread.sleep(Random.nextInt(400) + 100)
       val p = Random.nextInt(10) + 1
       log.debug(p.toString)
-      sender ! PriceResponse(name, p)
+      sender ! InternalPriceResponse(name, p)
       self ! PoisonPill
     }
   }
@@ -18,4 +17,5 @@ class PriceGenerator extends Actor with ActorLogging {
 
 object PriceGenerator {
   case class InternalPriceQuery(name: String, sender: ActorRef)
+  case class InternalPriceResponse(name: String, price: Long)
 }

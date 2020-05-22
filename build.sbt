@@ -14,3 +14,6 @@ libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.6.5"
 libraryDependencies += "com.typesafe.akka" %% "akka-persistence" % "2.6.5"
 
 libraryDependencies += "org.jsoup" % "jsoup" % "1.13.1"
+
+libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.31.1"
+libraryDependencies += "org.tpolecat" %% "doobie-core" % "0.9.0"

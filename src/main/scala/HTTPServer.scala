@@ -16,7 +16,7 @@ class HTTPServer(server: ActorRef) {
     concat(
       pathPrefix("price" / Remaining) { name =>
         get {
-          val res = (server ? PriceQuery(name)).fallbackTo(Future { NoPrices(name) }).mapTo[ServerResponse]
+          val res = (server ? PriceQuery(name)).fallbackTo(Future { NoPrices(name, 0) }).mapTo[ServerResponse]
           complete(res)
         }
       },
