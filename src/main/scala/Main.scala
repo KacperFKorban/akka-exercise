@@ -25,32 +25,23 @@ object Main extends App {
       .map(name => name -> system.actorOf(Client.props(server), name))
       .toMap
 
+  val msgPattern: String = "Command pattern: clientN productName1;clientM productName2"
   println("Started app with http server on http://localhost:8080/")
   println(s"Type :q to stop...")
-  println("Command pattern: clientN productName or clientN productName1;clientM productName2")
-  Source.fromInputStream(System.in).getLines.foreach { msg =>
-    val tokens = msg.split(';').map(_.split(' '))
-    if (msg == ":q") {
-      bindingFuture
-        .flatMap(_.unbind())
-        .onComplete(_ => {
-          system.terminate()
-          System.exit(0)
-        })
-    } else if(tokens.exists(_.length != 2)) {
-      println("Command pattern: clientN productName or clientN productName1;clientM productName2")
-    } else {
-      tokens.foreach { toks =>
-        val clientName = toks.head
-        if (!"client[1-5]+".r.matches(clientName)) {
-          println("Command pattern: clientN productName or clientN productName1;clientM productName2")
-        } else {
+  println(msgPattern)
+  Source.fromInputStream(System.in).getLines.foreach {
+    case ":q" =>
+      system.terminate()
+      System.exit(0)
+    case msg =>
+      msg
+        .split(';')
+        .map(_.trim.split(' '))
+        .filter(_.length == 2)
+        .foreach { toks =>
+          val clientName = toks.head
           val productName = toks(1)
-          val client = clients(clientName)
-          client ! productName
+          clients.get(clientName).fold(println(s"[Wrong input] $msgPattern"))(_ ! productName)
         }
-      }
-    }
   }
-
 }
