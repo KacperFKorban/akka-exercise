@@ -27,9 +27,9 @@ object Main extends App {
 
   println("Started app with http server on http://localhost:8080/")
   println(s"Type :q to stop...")
-  println("Command pattern: clientN productName")
+  println("Command pattern: clientN productName or clientN productName1;clientM productName2")
   Source.fromInputStream(System.in).getLines.foreach { msg =>
-    val tokens = msg.split(' ')
+    val tokens = msg.split(';').map(_.split(' '))
     if (msg == ":q") {
       bindingFuture
         .flatMap(_.unbind())
@@ -37,16 +37,18 @@ object Main extends App {
           system.terminate()
           System.exit(0)
         })
-    } else if(tokens.size != 2) {
-      println("Command pattern: clientN productName")
+    } else if(tokens.exists(_.length != 2)) {
+      println("Command pattern: clientN productName or clientN productName1;clientM productName2")
     } else {
-      val clientName = tokens.head
-      if (!"client[1-5]+".r.matches(clientName)) {
-        println("Command pattern: clientN productName")
-      } else {
-        val productName = tokens(1)
-        val client = clients(clientName)
-        client ! productName
+      tokens.foreach { toks =>
+        val clientName = toks.head
+        if (!"client[1-5]+".r.matches(clientName)) {
+          println("Command pattern: clientN productName or clientN productName1;clientM productName2")
+        } else {
+          val productName = toks(1)
+          val client = clients(clientName)
+          client ! productName
+        }
       }
     }
   }

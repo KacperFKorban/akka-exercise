@@ -1,17 +1,18 @@
 import Server.PriceQuery
 import PriceGenerator.InternalPriceQuery
-import akka.actor.{Actor, Props}
-import cats.effect.IO
+import akka.actor.{Actor, ActorRef, Props}
+import cats.effect.{ContextShift, IO}
 import doobie.util.transactor.Transactor
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 import doobie.implicits._
+import doobie.util.transactor.Transactor.Aux
 
 class Server extends Actor {
 
-  implicit val cs = IO.contextShift(context.dispatcher)
+  implicit val cs: ContextShift[IO] = IO.contextShift(context.dispatcher)
 
-  val xa = Transactor.fromDriverManager[IO](
+  val xa: Aux[IO, Unit] = Transactor.fromDriverManager[IO](
     "org.sqlite.JDBC", "jdbc:sqlite:queries.db", "", ""
   )
 
@@ -22,8 +23,10 @@ class Server extends Actor {
   )
   """.update.run.transact(xa).unsafeRunSync()
 
+  val quantityHandler: ActorRef = context.actorOf(Props[QuantityHandler])
+
   override def receive: Receive = {
-    case PriceQuery(name) => context.actorOf(ServerHandler.props(xa)) ! InternalPriceQuery(name, sender)
+    case PriceQuery(name) => context.actorOf(ServerHandler.props(quantityHandler)) ! InternalPriceQuery(name, sender)
   }
 }
 
@@ -33,14 +36,10 @@ object Server {
   case class PriceResponse(name: String, price: Long, quantity: Long) extends ServerResponse
   case class NoPrices(name: String, quantity: Long) extends ServerResponse
 
-  implicit val priceResponseFormat = jsonFormat3(PriceResponse)
-  implicit val noPricesFormat = jsonFormat2(NoPrices)
-  implicit val serverResponseWriter = new RootJsonWriter[ServerResponse] {
-    def write(obj: ServerResponse): JsValue = {
-      obj match {
-        case r: PriceResponse => priceResponseFormat.write(r)
-        case n: NoPrices => noPricesFormat.write(n)
-      }
-    }
+  implicit val priceResponseFormat: RootJsonFormat[PriceResponse] = jsonFormat3(PriceResponse)
+  implicit val noPricesFormat: RootJsonFormat[NoPrices] = jsonFormat2(NoPrices)
+  implicit val serverResponseWriter: RootJsonWriter[ServerResponse] = {
+    case r: PriceResponse => priceResponseFormat.write(r)
+    case n: NoPrices => noPricesFormat.write(n)
   }
 }

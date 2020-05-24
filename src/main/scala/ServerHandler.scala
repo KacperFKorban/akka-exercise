@@ -1,17 +1,15 @@
-import DBHandler.QueryQuantity
 import PriceGenerator.{InternalPriceQuery, InternalPriceResponse}
+import QuantityHandler.QueryQuantity
 import Server.{NoPrices, PriceQuery, PriceResponse}
-import akka.actor.{Actor, ActorLogging, PoisonPill, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import akka.util.Timeout
 import akka.pattern.ask
-import cats.effect.IO
-import doobie.util.transactor.Transactor
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Success
 
-class ServerHandler(val xa: Transactor.Aux[IO, Unit]) extends Actor with ActorLogging {
+class ServerHandler(val quantityHandler: ActorRef) extends Actor with ActorLogging {
 
   implicit val timeout: Timeout = 300.milliseconds
   implicit val ec: ExecutionContext = context.dispatcher
@@ -21,7 +19,7 @@ class ServerHandler(val xa: Transactor.Aux[IO, Unit]) extends Actor with ActorLo
       log.debug("Received query")
       val q1 = (context.actorOf(Props[PriceGenerator]) ? query).mapTo[InternalPriceResponse]
       val q2 = (context.actorOf(Props[PriceGenerator]) ? query).mapTo[InternalPriceResponse]
-      val q = (context.actorOf(DBHandler.props(xa)) ? PriceQuery(query.name)).mapTo[QueryQuantity].map(_.quantity)
+      val q = (quantityHandler ? PriceQuery(query.name)).mapTo[QueryQuantity].map(_.quantity)
       val f = q1.zipWith(q2)((r1, r2) => Seq(r1.price, r2.price).min).fallbackTo(q1.map(_.price)).fallbackTo(q2.map(_.price))
       val res = f.zip(q).fallbackTo(q)
       res.onComplete {
@@ -34,5 +32,5 @@ class ServerHandler(val xa: Transactor.Aux[IO, Unit]) extends Actor with ActorLo
   }
 }
 object ServerHandler {
-  def props(xa: Transactor.Aux[IO, Unit]): Props = Props(new ServerHandler(xa))
+  def props(quantityHandler: ActorRef): Props = Props(new ServerHandler(quantityHandler))
 }
